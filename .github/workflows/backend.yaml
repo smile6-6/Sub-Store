@@ -1,0 +1,50 @@
+name: Release Backend
+
+on: [push]
+
+jobs:
+  release:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        arch:
+          - x64
+          - arm64
+        node-version:
+          - 16
+        os:
+          - linux
+          - macos
+          - win
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        if: success()
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - name: Install
+        if: success()
+        run: npm ci
+        working-directory: backend
+      - name: Build
+        if: success()
+        run: npm run build:server && mv sub-store.min.js sub-store.node${{ matrix.node-version }}-${{ matrix.os }}-${{ matrix.arch }}-alpha.min.js
+        working-directory: backend
+
+      - name: Tag Repo
+        uses: richardsimko/update-tag@v1
+        with:
+          tag_name: Prerelease-Alpha
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Alpha
+        uses: softprops/action-gh-release@v1
+        if: success()
+        with:
+          tag: Alpha
+          tag_name: Prerelease-Alpha
+          files: backend/sub-store.node${{ matrix.node-version }}-${{ matrix.os }}-${{ matrix.arch }}-alpha.min.js
+          prerelease: true
+          generate_release_notes: true

@@ -7,16 +7,24 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "serve": "node sub-store.min.js",
     "start": "nodemon --exec node_modules/.bin/babel-node src/main.js",
-    "build": "gulp"
+    "build": "gulp",
+    "dev": "node build.js -watch -run",
+    "build:server": "node build.js"
   },
   "author": "Peng-YM",
   "license": "GPL",
   "dependencies": {
+    "bluebird": "^3.7.2",
     "body-parser": "^1.19.0",
+    "crypto-js": "^4.0.0",
     "express": "^4.17.1",
+    "got": "^11.5.1",
+    "iconv-lite": "0.6.3",
     "js-base64": "^3.7.2",
+    "lodash": "^4.17.21",
     "request": "^2.88.2",
-    "static-js-yaml": "^1.0.0"
+    "static-js-yaml": "^1.0.0",
+    "tough-cookie": "^4.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.18.0",
@@ -29,6 +37,7 @@
     "browser-pack-flat": "^3.4.2",
     "browserify": "^17.0.0",
     "eslint": "^8.16.0",
+    "estrella": "^1.4.1",
     "gulp": "^4.0.2",
     "gulp-babel": "^8.0.0",
     "gulp-eslint-new": "^1.4.4",

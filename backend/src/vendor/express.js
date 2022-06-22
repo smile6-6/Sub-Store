@@ -1,7 +1,8 @@
 /* eslint-disable no-undef */
 import { ENV } from './open-api';
 
-export default function express({ substore: $, port, host }) {
+export default function express({ substore: $, port }) {
+    port = port || 3000;
     const { isNode } = ENV();
     const DEFAULT_HEADERS = {
         'Content-Type': 'text/plain;charset=UTF-8',
@@ -13,8 +14,8 @@ export default function express({ substore: $, port, host }) {
 
     // node support
     if (isNode) {
-        const express_ = eval(`require("express")`);
-        const bodyParser = eval(`require("body-parser")`);
+        const express_ = require("express");
+        const bodyParser = require("body-parser");
         const app = express_();
         app.use(bodyParser.json({ verify: rawBodySaver }));
         app.use(
@@ -28,9 +29,8 @@ export default function express({ substore: $, port, host }) {
 
         // adapter
         app.start = () => {
-            const server = app.listen(port || process.env.PORT || 3000, host || process.env.HOST || '127.0.0.1', () => {
-                const { address, port } = server.address();
-                $.info(`Express started on: ${address}:${port}`);
+            app.listen(port, () => {
+                $.info(`Express started on port: ${port}`);
             });
         };
         return app;

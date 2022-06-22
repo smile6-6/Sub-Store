@@ -2,7 +2,7 @@
 const isQX = typeof $task !== 'undefined';
 const isLoon = typeof $loon !== 'undefined';
 const isSurge = typeof $httpClient !== 'undefined' && !isLoon;
-const isNode = eval(`typeof process !== "undefined"`);
+const isNode = 'undefined' !== typeof module && !!module.exports;
 
 export class OpenAPI {
     constructor(name = 'untitled', debug = false) {
@@ -14,7 +14,7 @@ export class OpenAPI {
 
         this.node = (() => {
             if (isNode) {
-                const fs = eval("require('fs')");
+                const fs = require('fs');
 
                 return {
                     fs,
@@ -265,7 +265,7 @@ export function HTTP(defaultOptions = { baseURL: '' }) {
         } else if (isLoon || isSurge || isNode) {
             worker = new Promise((resolve, reject) => {
                 const request = isNode
-                    ? eval("require('request')")
+                    ? require('request')
                     : $httpClient;
                 request[method.toLowerCase()](
                     options,

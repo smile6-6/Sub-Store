@@ -1,0 +1,36 @@
+name: Deploy Frontend
+
+on: [push]
+
+defaults:
+  run:
+    working-directory: web
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-node@v3
+      if: success()
+      with:
+        node-version: 16
+        cache: 'npm'
+    - name: Install
+      if: success()
+      run: npm ci
+    - name: Build
+      if: success()
+      run: npm run build
+    - name: Check GitHub Pages status
+      if: success()
+      uses: crazy-max/ghaction-github-status@v3
+      with:
+        pages_threshold: major_outage
+    - name: Deploy to GitHub Pages
+      if: success()
+      uses: crazy-max/ghaction-github-pages@v3
+      with:
+        target_branch: gh-pages
+        build_dir: web/dist
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

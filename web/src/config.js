@@ -5,8 +5,6 @@ let savedDomain = localStorage.getItem('domain')
 
 const searchParams = new URLSearchParams(window.location.search)
 
-console.log({ searchParams })
-
 const newDomain = searchParams.get('domain')
 
 if (savedDomain !== newDomain) {
