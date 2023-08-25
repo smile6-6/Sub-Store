@@ -4,6 +4,14 @@ import $ from '@/core/app';
 
 const targetPlatform = 'Surge';
 
+const ipVersions = {
+    dual: 'dual',
+    ipv4: 'v4-only',
+    ipv6: 'v6-only',
+    'ipv4-prefer': 'prefer-v4',
+    'ipv6-prefer': 'prefer-v6',
+};
+
 export default function Surge_Producer() {
     const produce = (proxy) => {
         switch (proxy.type) {
@@ -19,6 +27,8 @@ export default function Surge_Producer() {
                 return socks5(proxy);
             case 'snell':
                 return snell(proxy);
+            case 'tuic':
+                return tuic(proxy);
         }
         throw new Error(
             `Platform ${targetPlatform} does not support proxy type: ${proxy.type}`,
@@ -215,20 +225,63 @@ function snell(proxy) {
 
     // obfs
     result.appendIfPresent(
-        `,obfs=${proxy['obfs-opts'].mode}`,
+        `,obfs=${proxy['obfs-opts']?.mode}`,
         'obfs-opts.mode',
     );
     result.appendIfPresent(
-        `,obfs-host=${proxy['obfs-opts'].host}`,
+        `,obfs-host=${proxy['obfs-opts']?.host}`,
         'obfs-opts.host',
     );
     result.appendIfPresent(
-        `,obfs-uri=${proxy['obfs-opts'].path}`,
+        `,obfs-uri=${proxy['obfs-opts']?.path}`,
         'obfs-opts.path',
     );
 
     // udp
     result.appendIfPresent(`,udp-relay=${proxy.udp}`, 'udp');
+
+    // test-url
+    result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
+
+    // reuse
+    result.appendIfPresent(`,reuse=${proxy['reuse']}`, 'reuse');
+
+    return result.toString();
+}
+
+function tuic(proxy) {
+    const result = new Result(proxy);
+    // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/adapter/outbound/tuic.go#L197
+    let type = proxy.type;
+    if (!proxy.token || proxy.token.length === 0) {
+        type = 'tuic-v5';
+    }
+    result.append(`${proxy.name}=${type},${proxy.server},${proxy.port}`);
+
+    result.appendIfPresent(`,uuid=${proxy.uuid}`, 'uuid');
+    result.appendIfPresent(`,password=${proxy.password}`, 'password');
+    result.appendIfPresent(`,token=${proxy.token}`, 'token');
+
+    result.appendIfPresent(
+        `,alpn=${Array.isArray(proxy.alpn) ? proxy.alpn[0] : proxy.alpn}`,
+        'alpn',
+    );
+
+    result.appendIfPresent(
+        `,ip-version=${ipVersions[proxy['ip-version']] || proxy['ip-version']}`,
+        'ip-version',
+    );
+
+    // tls verification
+    result.appendIfPresent(`,sni=${proxy.sni}`, 'sni');
+    result.appendIfPresent(
+        `,skip-cert-verify=${proxy['skip-cert-verify']}`,
+        'skip-cert-verify',
+    );
+
+    // tfo
+    result.appendIfPresent(`,tfo=${proxy['fast-open']}`, 'fast-open');
+    result.appendIfPresent(`,tfo=${proxy.tfo}`, 'tfo');
 
     // test-url
     result.appendIfPresent(`,test-url=${proxy['test-url']}`, 'test-url');
@@ -248,7 +301,13 @@ function handleTransport(result, proxy) {
                 if (isPresent(proxy, 'ws-opts.headers')) {
                     const headers = proxy['ws-opts'].headers;
                     const value = Object.keys(headers)
-                        .map((k) => `${k}:${headers[k]}`)
+                        .map((k) => {
+                            let v = headers[k];
+                            if (['Host'].includes(k)) {
+                                v = `"${v}"`;
+                            }
+                            return `${k}:${v}`;
+                        })
                         .join('|');
                     if (isNotBlank(value)) {
                         result.append(`,ws-headers=${value}`);

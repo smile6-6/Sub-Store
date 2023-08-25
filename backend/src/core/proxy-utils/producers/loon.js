@@ -127,9 +127,7 @@ function trojan(proxy) {
 function vmess(proxy) {
     const result = new Result(proxy);
     result.append(
-        `${proxy.name}=vmess,${proxy.server},${proxy.port},${
-            proxy.cipher === 'auto' ? 'none' : proxy.cipher
-        },"${proxy.uuid}"`,
+        `${proxy.name}=vmess,${proxy.server},${proxy.port},${proxy.cipher},"${proxy.uuid}"`,
     );
 
     // transport
@@ -146,12 +144,14 @@ function vmess(proxy) {
             );
         } else if (proxy.network === 'http') {
             result.append(`,transport=http`);
+            let httpPath = proxy['http-opts']?.path;
+            let httpHost = proxy['http-opts']?.headers?.Host;
             result.appendIfPresent(
-                `,path=${proxy['http-opts'].path}`,
+                `,path=${Array.isArray(httpPath) ? httpPath[0] : httpPath}`,
                 'http-opts.path',
             );
             result.appendIfPresent(
-                `,host=${proxy['http-opts'].headers.Host}`,
+                `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
                 'http-opts.headers.Host',
             );
         } else {
@@ -208,12 +208,14 @@ function vless(proxy) {
             );
         } else if (proxy.network === 'http') {
             result.append(`,transport=http`);
+            let httpPath = proxy['http-opts']?.path;
+            let httpHost = proxy['http-opts']?.headers?.Host;
             result.appendIfPresent(
-                `,path=${proxy['http-opts'].path}`,
+                `,path=${Array.isArray(httpPath) ? httpPath[0] : httpPath}`,
                 'http-opts.path',
             );
             result.appendIfPresent(
-                `,host=${proxy['http-opts'].headers.Host}`,
+                `,host=${Array.isArray(httpHost) ? httpHost[0] : httpHost}`,
                 'http-opts.headers.Host',
             );
         } else {

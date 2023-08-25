@@ -23,12 +23,19 @@ function URI_SS() {
         };
         content = content.split('#')[0]; // strip proxy name
         // handle IPV4 and IPV6
-        const serverAndPort = content.match(/@([^/]*)(\/|$)/)[1];
+        let serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
+        let userInfoStr = Base64.decode(content.split('@')[0]);
+        if (!serverAndPortArray) {
+            content = Base64.decode(content);
+            userInfoStr = content.split('@')[0];
+            serverAndPortArray = content.match(/@([^/]*)(\/|$)/);
+        }
+        const serverAndPort = serverAndPortArray[1];
         const portIdx = serverAndPort.lastIndexOf(':');
         proxy.server = serverAndPort.substring(0, portIdx);
         proxy.port = serverAndPort.substring(portIdx + 1);
 
-        const userInfo = Base64.decode(content.split('@')[0]).split(':');
+        const userInfo = userInfoStr.split(':');
         proxy.cipher = userInfo[0];
         proxy.password = userInfo[1];
 
@@ -209,14 +216,18 @@ function URI_VMess() {
                 type: 'vmess',
                 server: params.add,
                 port: params.port,
-                cipher: 'auto', // V2rayN has no default cipher! use aes-128-gcm as default.
+                cipher: getIfPresent(params.scy, 'auto'),
                 uuid: params.id,
-                alterId: getIfPresent(params.aid, 0),
+                alterId: parseInt(getIfPresent(params.aid, 0)),
                 tls: params.tls === 'tls' || params.tls === true,
                 'skip-cert-verify': isPresent(params.verify_cert)
                     ? !params.verify_cert
                     : undefined,
             };
+            // https://github.com/2dust/v2rayN/wiki/%E5%88%86%E4%BA%AB%E9%93%BE%E6%8E%A5%E6%A0%BC%E5%BC%8F%E8%AF%B4%E6%98%8E(ver-2)
+            if (proxy.tls && proxy.sni) {
+                proxy.sni = params.sni;
+            }
             // handle obfs
             if (params.net === 'ws') {
                 proxy.network = 'ws';
@@ -224,7 +235,9 @@ function URI_VMess() {
                     path: getIfNotBlank(params.path),
                     headers: { Host: getIfNotBlank(params.host) },
                 };
-                if (proxy.tls && params.host) {
+                // https://github.com/MetaCubeX/Clash.Meta/blob/Alpha/docs/config.yaml#L413
+                // sni 优先级应高于 host
+                if (proxy.tls && !proxy.sni && params.host) {
                     proxy.sni = params.host;
                 }
             }
@@ -270,6 +283,7 @@ function Clash_All() {
                 'http',
                 'snell',
                 'trojan',
+                'tuic',
             ].includes(proxy.type)
         ) {
             throw new Error(
@@ -281,6 +295,16 @@ function Clash_All() {
         if (proxy.type === 'vmess') {
             proxy.sni = proxy.servername;
             delete proxy.servername;
+            if (proxy.tls && !proxy.sni) {
+                if (proxy.network === 'ws') {
+                    proxy.sni = proxy['ws-opts']?.headers?.Host;
+                } else if (proxy.network === 'http') {
+                    let httpHost = proxy['http-opts']?.headers?.Host;
+                    proxy.sni = Array.isArray(httpHost)
+                        ? httpHost[0]
+                        : httpHost;
+                }
+            }
         }
 
         return proxy;
@@ -474,6 +498,15 @@ function Surge_Snell() {
     return { name, test, parse };
 }
 
+function Surge_Tuic() {
+    const name = 'Surge Tuic Parser';
+    const test = (line) => {
+        return /^.*=\s*tuic(-v5)??/.test(line.split(',')[0]);
+    };
+    const parse = (line) => getSurgeParser().parse(line);
+    return { name, test, parse };
+}
+
 export default [
     URI_SS(),
     URI_SSR(),
@@ -485,6 +518,7 @@ export default [
     Surge_Trojan(),
     Surge_Http(),
     Surge_Snell(),
+    Surge_Tuic(),
     Surge_Socks5(),
     Loon_SS(),
     Loon_SSR(),
